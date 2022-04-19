@@ -15,14 +15,22 @@ Write-Output "Konveriere $maxper Dateien..."
 
 
 $block = {
-    Param($file)
+    Param($dir, $file)
    $fullname = $file.FullName
    $name = $file.Name
-   $output = "C:\Users\johan\OneDrive\Dokumente\programmieren\rename-for-pictur\output\$name.png"
+   $output = "$dir\$name.pic.png"
+   $background = "$dir\$name.back.png"
+   $target = "$dir\$name.png"
    if( -not (Test-Path $output -PathType Leaf)){
        Write-Output "Konvertiere $name nach png..."
-       #Write-Output "convert.ps1 $fullname -resize 1920x1080^> output\$name.png"
-       convert.ps1 $fullname  -auto-orient -colorspace sRGB -resize 1920x1080> $output
+       # blur strechted background
+       magick $fullname -auto-orient -colorspace sRGB -resize 1920x1080! -blur 0x8 $background
+       #resize 
+       magick $fullname  -auto-orient -colorspace sRGB -resize 1920x1080> $output
+       #combine blur+resized
+       magick composite -gravity center $output $background $target
+       Remove-Item $background
+       Remove-Item $output
    }
 }
 #Remove all jobs
@@ -39,7 +47,7 @@ foreach($file in $files){
     While ($(Get-Job -state running).count -ge $MaxThreads){
         Start-Sleep -Milliseconds 20
     }
-    Start-Job -Scriptblock $Block -ArgumentList $file
+    Start-Job -Scriptblock $Block -ArgumentList (".\output", $file)
     $counter++
 }
 #Wait for all jobs to finish.
